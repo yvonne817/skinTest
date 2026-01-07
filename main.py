@@ -54,15 +54,48 @@ if uploaded_file is not None:
         with st.spinner('AI 正在分析中...'):
             results = model.predict(source=img_bgr, conf=conf_threshold)
             
+            # 取得結果物件的第一項 (因為我們只傳一張圖)
+            result = results[0]
+            
             # 取得畫好框的圖片 (BGR 轉 RGB)
-            annotated_img = cv2.cvtColor(results[0].plot(), cv2.COLOR_BGR2RGB)
+            annotated_img = cv2.cvtColor(result.plot(), cv2.COLOR_BGR2RGB)
             
             with col2:
                 st.subheader("偵測結果")
                 st.image(annotated_img, use_container_width=True)
                 
-            # 顯示偵測統計
-            num_detections = len(results[0].boxes)
+                # --- 新增程式碼：顯示詳細數據 ---
+                # 判斷是否有偵測到物件
+                if len(result.boxes) > 0:
+                    st.divider() # 分隔線
+                    st.caption("詳細偵測數據列表：")
+                    
+                    # 建立一個列表來儲存數據
+                    detection_data = []
+                    
+                    # 取得類別名稱的字典 {0: 'acne', 1: 'spot', ...}
+                    names = result.names
+                    
+                    # 遍歷每一個偵測到的框
+                    for box in result.boxes:
+                        # 取得類別 ID (整數)
+                        cls_id = int(box.cls[0])
+                        # 取得類別名稱
+                        class_name = names[cls_id]
+                        # 取得信心指數 (浮點數)
+                        confidence = float(box.conf[0])
+                        
+                        # 加入列表
+                        detection_data.append({
+                            "偵測類別": class_name,
+                            "信心指數": f"{confidence:.2%}" # 轉為百分比格式，例如 85.20%
+                        })
+                    
+                    # 使用 Streamlit 的表格元件顯示
+                    st.table(detection_data)
+                
+            # 顯示偵測統計文字
+            num_detections = len(result.boxes)
             if num_detections > 0:
                 st.success(f"偵測完成！共發現 {num_detections} 處目標。")
             else:
